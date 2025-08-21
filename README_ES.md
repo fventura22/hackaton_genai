@@ -6,10 +6,10 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 
 ### Sistema Multiagéntico de IA
 - **Agente Principal Coordinador** (Puerto 8003) - Orquesta y toma decisiones finales basadas en análisis de agentes especialistas
+- **Agente Especialista en Historial de Reclamos** (Puerto 8006) - Analiza patrones de comportamiento de reclamos
 - **Agente Especialista en Historial de Compras** (Puerto 8006) - Analiza patrones de comportamiento de compra y transacciones históricas
 - **Agente Especialista en Black List** (Puerto 8007) - Verifica contra listas negras de clientes, dispositivos y ubicaciones sospechosas
 - **Agente Especialista en Datos Sociodemográficos** (Puerto 8008) - Analiza perfiles demográficos y comportamientos asociados
-- **Agente Especialista en Análisis Temporal** (Puerto 8009) - Detecta patrones temporales anómalos y velocidad de transacciones
 
 
 ### Microservicios de Soporte
@@ -24,8 +24,6 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 - **Reclamos y Disputas** - Registros de reclamos, chargebacks y disputas de clientes en S3
 - **Datos Sociodemográficos** - Perfiles demográficos y segmentación de clientes en S3
 - **Black Lists** - Listas negras de clientes, dispositivos y ubicaciones sospechosas en S3
-- **Logs de Geolocalización** - Datos de ubicación y patrones geográficos en S3
-- **Datos de Dispositivos** - Información de dispositivos y huellas digitales en S3
 
 ### Infraestructura
 - **AWS S3** - Almacenamiento de datos históricos y fuentes de información para agentes
@@ -41,14 +39,9 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 ### Detección de Fraude con Sistema Multiagéntico
 - **Agente Principal**: Coordina análisis de todos los agentes especialistas y toma decisión final
 - **Agente de Historial de Compras**: Extrae datos de S3 (transacciones históricas) y analiza patrones de comportamiento de compra, frecuencia, montos típicos y desviaciones
+- **Agente de Analisis de reclamos**: Extrae datos de S3 (transacciones históricas) y analiza patrones de comportamiento de reclamos, frecuencia
 - **Agente de Black List**: Consulta listas negras almacenadas en S3 para verificar clientes fraudulentos, dispositivos comprometidos y ubicaciones de riesgo
 - **Agente Sociodemográfico**: Accede a datos demográficos en S3 para analizar edad, ubicación, ingresos, comportamiento típico por segmento
-- **Agente Temporal**: Detecta transacciones en horarios inusuales, velocidad anómala y patrones temporales sospechosos
-- **Agente de Geolocalización**: Utiliza logs de geolocalización de S3 para analizar ubicaciones inusuales, viajes imposibles y zonas de alto riesgo
-- Extracción automática de datos desde buckets S3 especializados por cada agente
-- Puntuación de riesgo consolidada con niveles de confianza de cada agente especialista
-- Toma de decisiones automatizada con supervisión humana
-- Alertas de fraude en tiempo real con detalles de cada agente
 
 ### Aplicación Web
 - Diseño responsivo (funciona en PC y móvil)
@@ -61,12 +54,9 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 
 ### Capacidades de Detección por Agente Especialista
 - **Agente de Historial de Compras**: Detecta montos inusuales vs. historial, cambios en patrones de compra, frecuencia anómala
+- **Agente de Historial de Reclamos**: Detecta los reclamos similares del mismo productos o servicios
 - **Agente de Black List**: Verifica identidades, números de tarjeta, dispositivos y IPs en listas negras
 - **Agente Sociodemográfico**: Analiza coherencia entre perfil demográfico y comportamiento de compra
-- **Agente Temporal**: Identifica transacciones en horarios inusuales, velocidad de transacciones sospechosa
-- **Agente de Geolocalización**: Detecta ubicaciones inusuales, viajes imposibles, zonas de alto riesgo
-- **Análisis de Dispositivos**: Analiza huellas digitales y comportamiento de dispositivos (integrado en múltiples agentes)
-- **Coincidencia de Patrones**: Cada agente mantiene patrones específicos de su dominio de especialización
 
 ## Inicio Rápido
 
@@ -154,11 +144,11 @@ Content-Type: application/json
 ## Lógica de Detección de Fraude
 
 ### Factores de Riesgo
-1. **Monto Alto**: Transacciones superiores a $10,000 o 3 veces el promedio del cliente
+1. **Monto Alto**: Transacciones superiores a $1.200,000 o 3 veces el promedio del cliente
 2. **Tiempo Inusual**: Transacciones durante 12 AM - 6 AM
 3. **Ubicación Sospechosa**: Ubicaciones desconocidas o de alto riesgo
 4. **Alta Velocidad**: Más de 5 transacciones por hora
-5. **Riesgo de Dispositivo**: Puntuaciones altas de riesgo de dispositivo (>0.7)
+5. **Riesgo del Segmento**: Si es prepago es más alto que pospago
 
 ### Umbrales de Decisión
 - **Bloquear** (>80%): Alto riesgo de fraude - bloqueo automático
@@ -197,12 +187,8 @@ JWT_SECRET=your-secret-key
 AWS_ACCESS_KEY_ID=your-access-key
 AWS_SECRET_ACCESS_KEY=your-secret-key
 AWS_REGION=us-east-1
-S3_BUCKET_PURCHASE_HISTORY=fraud-detection-purchase-history
-S3_BUCKET_CLAIMS=fraud-detection-claims
-S3_BUCKET_DEMOGRAPHICS=fraud-detection-demographics
-S3_BUCKET_BLACKLISTS=fraud-detection-blacklists
-S3_BUCKET_GEOLOCATION=fraud-detection-geolocation
-S3_BUCKET_DEVICES=fraud-detection-devices
+S3_BUCKET_STORE=fraud-detection-history
+
 ```
 
 ## Características de Seguridad
