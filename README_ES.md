@@ -263,11 +263,7 @@ AWS_S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
 
 # S3 Buckets por Agente Especialista
 S3_BUCKET_PURCHASE_HISTORY=fraud-detection-purchase-history
-S3_BUCKET_CLAIMS=fraud-detection-claims-disputes
-S3_BUCKET_DEMOGRAPHICS=fraud-detection-demographics
-S3_BUCKET_BLACKLISTS=fraud-detection-blacklists
-S3_BUCKET_GEOLOCATION=fraud-detection-geolocation
-S3_BUCKET_DEVICES=fraud-detection-device-fingerprints
+
 
 # Configuración de Agentes
 AGENT_COORDINATOR_PORT=8003
