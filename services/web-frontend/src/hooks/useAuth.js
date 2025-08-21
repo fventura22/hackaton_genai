@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import CognitoService from '../services/CognitoService';
 import ApiService from '../services/ApiService';
 
 const AuthContext = createContext();
@@ -9,21 +10,23 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
+    if (CognitoService.isAuthenticated()) {
+      const userInfo = CognitoService.getCurrentUser();
+      const token = CognitoService.getAccessToken();
       ApiService.setAuthToken(token);
       setIsAuthenticated(true);
+      setUser(userInfo);
     }
     setLoading(false);
   }, []);
 
   const login = async (username, password) => {
     try {
-      const result = await ApiService.login(username, password);
+      const result = await CognitoService.login(username, password);
       if (result.success) {
-        localStorage.setItem('authToken', result.token);
+        ApiService.setAuthToken(result.tokens.accessToken);
         setIsAuthenticated(true);
-        setUser({ username });
+        setUser(result.user);
         return { success: true };
       }
       return result;
@@ -33,18 +36,23 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
+    CognitoService.logout();
     setIsAuthenticated(false);
     setUser(null);
     ApiService.setAuthToken(null);
   };
+
+  const isAdmin = () => CognitoService.isAdmin();
+  const isAnalyst = () => CognitoService.isAnalyst();
 
   const value = {
     isAuthenticated,
     user,
     login,
     logout,
-    loading
+    loading,
+    isAdmin,
+    isAnalyst
   };
 
   return (

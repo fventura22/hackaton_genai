@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:8000/api`;
-const USER_SERVICE_URL = process.env.REACT_APP_USER_SERVICE_URL || `http://${window.location.hostname}:8004`;
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+const USER_SERVICE_URL = process.env.REACT_APP_USER_SERVICE_URL || '/api';
 
 class ApiService {
   constructor() {
