@@ -4,16 +4,32 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 
 ## Descripción General de la Arquitectura
 
-### Microservicios
+### Sistema Multiagéntico de IA
+- **Agente Principal Coordinador** (Puerto 8003) - Orquesta y toma decisiones finales basadas en análisis de agentes especialistas
+- **Agente Especialista en Historial de Compras** (Puerto 8006) - Analiza patrones de comportamiento de compra y transacciones históricas
+- **Agente Especialista en Black List** (Puerto 8007) - Verifica contra listas negras de clientes, dispositivos y ubicaciones sospechosas
+- **Agente Especialista en Datos Sociodemográficos** (Puerto 8008) - Analiza perfiles demográficos y comportamientos asociados
+- **Agente Especialista en Análisis Temporal** (Puerto 8009) - Detecta patrones temporales anómalos y velocidad de transacciones
+
+
+### Microservicios de Soporte
 - **API Gateway** (Puerto 8000) - Punto de entrada central y orquestación de solicitudes
-- **Agente de Detección de Fraude** (Puerto 8003) - Agente de IA principal para toma de decisiones
-- **Servicio de Recolección de Datos** (Puerto 8001) - Obtiene datos de múltiples fuentes
-- **Servicio de Análisis de Patrones** (Puerto 8002) - Analiza patrones de fraude
+- **Servicio de Recolección de Datos** (Puerto 8001) - Obtiene datos de múltiples fuentes para alimentar agentes
+- **Servicio de Análisis de Patrones** (Puerto 8002) - Consolida análisis de todos los agentes especialistas
 - **Servicio de Gestión de Usuarios** (Puerto 8004) - Autenticación y autorización
 - **Servicio de Notificaciones** (Puerto 8005) - Alertas y notificaciones
 
+### Fuentes de Datos en AWS S3
+- **Historial de Compras** - Datos históricos de transacciones y patrones de compra almacenados en S3
+- **Reclamos y Disputas** - Registros de reclamos, chargebacks y disputas de clientes en S3
+- **Datos Sociodemográficos** - Perfiles demográficos y segmentación de clientes en S3
+- **Black Lists** - Listas negras de clientes, dispositivos y ubicaciones sospechosas en S3
+- **Logs de Geolocalización** - Datos de ubicación y patrones geográficos en S3
+- **Datos de Dispositivos** - Información de dispositivos y huellas digitales en S3
+
 ### Infraestructura
-- **PostgreSQL** - Base de datos principal
+- **AWS S3** - Almacenamiento de datos históricos y fuentes de información para agentes
+- **PostgreSQL** - Base de datos principal para datos operacionales
 - **Redis** - Caché y gestión de sesiones
 - **RabbitMQ** - Cola de mensajes para comunicación entre servicios
 
@@ -22,12 +38,17 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 
 ## Características
 
-### Detección de Fraude con IA
-- Recolección de datos de múltiples fuentes (perfiles de clientes, historial de transacciones, información de dispositivos, APIs externas)
-- Análisis de patrones basado en conocimientos del equipo de fraude
-- Puntuación de riesgo con niveles de confianza
+### Detección de Fraude con Sistema Multiagéntico
+- **Agente Principal**: Coordina análisis de todos los agentes especialistas y toma decisión final
+- **Agente de Historial de Compras**: Extrae datos de S3 (transacciones históricas) y analiza patrones de comportamiento de compra, frecuencia, montos típicos y desviaciones
+- **Agente de Black List**: Consulta listas negras almacenadas en S3 para verificar clientes fraudulentos, dispositivos comprometidos y ubicaciones de riesgo
+- **Agente Sociodemográfico**: Accede a datos demográficos en S3 para analizar edad, ubicación, ingresos, comportamiento típico por segmento
+- **Agente Temporal**: Detecta transacciones en horarios inusuales, velocidad anómala y patrones temporales sospechosos
+- **Agente de Geolocalización**: Utiliza logs de geolocalización de S3 para analizar ubicaciones inusuales, viajes imposibles y zonas de alto riesgo
+- Extracción automática de datos desde buckets S3 especializados por cada agente
+- Puntuación de riesgo consolidada con niveles de confianza de cada agente especialista
 - Toma de decisiones automatizada con supervisión humana
-- Alertas de fraude en tiempo real
+- Alertas de fraude en tiempo real con detalles de cada agente
 
 ### Aplicación Web
 - Diseño responsivo (funciona en PC y móvil)
@@ -38,13 +59,14 @@ Un sistema integral de detección de fraude construido con arquitectura de micro
 - Vistas detalladas de investigación de fraude
 - Acciones de Aprobar/Bloquear/Revisar
 
-### Capacidades de Detección de Fraude
-- **Análisis de Montos**: Detecta montos de transacción inusuales
-- **Análisis Temporal**: Identifica patrones de tiempo sospechosos
-- **Análisis de Ubicación**: Marca transacciones desde ubicaciones inusuales
-- **Análisis de Velocidad**: Detecta secuencias rápidas de transacciones
-- **Análisis de Dispositivos**: Analiza huellas digitales y comportamiento de dispositivos
-- **Coincidencia de Patrones**: Identifica patrones de fraude conocidos
+### Capacidades de Detección por Agente Especialista
+- **Agente de Historial de Compras**: Detecta montos inusuales vs. historial, cambios en patrones de compra, frecuencia anómala
+- **Agente de Black List**: Verifica identidades, números de tarjeta, dispositivos y IPs en listas negras
+- **Agente Sociodemográfico**: Analiza coherencia entre perfil demográfico y comportamiento de compra
+- **Agente Temporal**: Identifica transacciones en horarios inusuales, velocidad de transacciones sospechosa
+- **Agente de Geolocalización**: Detecta ubicaciones inusuales, viajes imposibles, zonas de alto riesgo
+- **Análisis de Dispositivos**: Analiza huellas digitales y comportamiento de dispositivos (integrado en múltiples agentes)
+- **Coincidencia de Patrones**: Cada agente mantiene patrones específicos de su dominio de especialización
 
 ## Inicio Rápido
 
@@ -170,6 +192,17 @@ DATABASE_URL=postgresql://user:pass@host:5432/db
 REDIS_URL=redis://host:6379
 RABBITMQ_URL=amqp://user:pass@host:5672
 JWT_SECRET=your-secret-key
+
+# Configuración AWS S3
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_REGION=us-east-1
+S3_BUCKET_PURCHASE_HISTORY=fraud-detection-purchase-history
+S3_BUCKET_CLAIMS=fraud-detection-claims
+S3_BUCKET_DEMOGRAPHICS=fraud-detection-demographics
+S3_BUCKET_BLACKLISTS=fraud-detection-blacklists
+S3_BUCKET_GEOLOCATION=fraud-detection-geolocation
+S3_BUCKET_DEVICES=fraud-detection-devices
 ```
 
 ## Características de Seguridad
