@@ -10,11 +10,12 @@ resource "aws_db_subnet_group" "main" {
 
 # RDS Instance
 resource "aws_db_instance" "main" {
-  identifier     = "${var.project_name}-db"
+  identifier = "${var.project_name}-postgres"
+
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15"
   instance_class = "db.t3.micro"
-  
+
   allocated_storage     = 20
   max_allocated_storage = 100
   storage_type          = "gp2"
@@ -35,6 +36,6 @@ resource "aws_db_instance" "main" {
   deletion_protection = false
 
   tags = {
-    Name = "${var.project_name}-db"
+    Name = "${var.project_name}-postgres"
   }
 }

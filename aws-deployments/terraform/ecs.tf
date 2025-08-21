@@ -23,7 +23,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 }
 
 # ECS Task Execution Role
-resource "aws_iam_role" "ecs_task_execution_role" {
+resource "aws_iam_role" "ecs_task_execution" {
   name = "${var.project_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
@@ -40,9 +40,50 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
+  role       = aws_iam_role.ecs_task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# ECS Task Role
+resource "aws_iam_role" "ecs_task" {
+  name = "${var.project_name}-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# S3 policy for fraud system v2
+resource "aws_iam_role_policy" "ecs_task_s3" {
+  name = "${var.project_name}-ecs-s3-policy"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::fraud-detection-purchase-history-tf",
+          "arn:aws:s3:::fraud-detection-purchase-history-tf/*"
+        ]
+      }
+    ]
+  })
 }
 
 # ECS Task Definition
@@ -52,7 +93,8 @@ resource "aws_ecs_task_definition" "main" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn           = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([
     {
@@ -69,6 +111,10 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "DATABASE_URL"
           value = "postgresql://fraud_user:fraud_pass_123!@${aws_db_instance.main.endpoint}/fraud_detection"
+        },
+        {
+          name  = "FRAUD_SYSTEM_URL"
+          value = "http://localhost:8003"
         }
       ]
       logConfiguration = {
@@ -100,8 +146,8 @@ resource "aws_ecs_task_definition" "main" {
       }
     },
     {
-      name  = "fraud-agent"
-      image = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.project_name}-fraud-agent:latest"
+      name  = "fraud-system-v2"
+      image = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.project_name}-fraud-system-v2:latest"
       portMappings = [
         {
           containerPort = 8003
@@ -109,19 +155,33 @@ resource "aws_ecs_task_definition" "main" {
         }
       ]
       essential = false
+      environment = [
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        },
+        {
+          name  = "S3_BUCKET"
+          value = "fraud-detection-purchase-history-tf"
+        },
+        {
+          name  = "S3_FILE"
+          value = "BaseFinal.csv"
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
           "awslogs-region"        = var.aws_region
-          "awslogs-stream-prefix" = "fraud-agent"
+          "awslogs-stream-prefix" = "fraud-system-v2"
         }
       }
     }
   ])
 
   tags = {
-    Name = "${var.project_name}-task"
+    Name = "${var.project_name}-task-definition"
   }
 }
 
@@ -130,12 +190,12 @@ resource "aws_ecs_service" "main" {
   name            = "${var.project_name}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = 1
+  desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = aws_subnet.public[*].id
     security_groups  = [aws_security_group.ecs.id]
+    subnets          = aws_subnet.public[*].id
     assign_public_ip = true
   }
 
@@ -152,8 +212,9 @@ resource "aws_ecs_service" "main" {
   }
 
   depends_on = [
+    # aws_lb_listener.frontend,
     aws_lb_listener.http,
-    aws_iam_role_policy_attachment.ecs_task_execution_role_policy
+    aws_lb_listener_rule.api
   ]
 
   tags = {
